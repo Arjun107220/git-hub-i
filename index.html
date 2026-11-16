@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>V-Service | Online Local Services Marketplace</title>
+    <!-- FontAwesome Vector Icons (Zero Standard Emojis) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- FLIPKART-STYLE STICKY HEADER -->
+    <header class="fk-header">
+        <div class="fk-nav-container">
+            <div class="fk-brand" onclick="app.goHome()">
+                <div class="brand-title">V-SERVICE</div>
+                <div class="brand-sub">Explore <span class="fk-yellow">Verified Pros</span> <i class="fa-solid fa-Screwdriver-wrench"></i></div>
+            </div>
+
+            <!-- Location & Search Bar (Active for Receivers) -->
+            <div class="fk-search-bar" id="header-search-area" style="display: none;">
+                <div class="location-box" onclick="app.detectGPSLocation()" title="Click to Auto-Detect Location">
+                    <i class="fa-solid fa-location-dot"></i>
+                    <input type="text" id="location-filter" placeholder="All Locations" oninput="app.renderMarketplace()">
+                    <i class="fa-solid fa-crosshairs gps-icon"></i>
+                </div>
+                <div class="search-input-wrap">
+                    <input type="text" id="global-search" placeholder="Search for Plumber, Electrician, AC Installation, Bore Well..." oninput="app.renderMarketplace()">
+                    <button><i class="fa-solid fa-magnifying-glass"></i></button>
+                </div>
+            </div>
+
+            <!-- Navigation Buttons -->
+            <div class="fk-nav-actions">
+                <span id="role-badge" class="role-pill" style="display: none;"></span>
+                <button id="btn-edit-my-profile" class="fk-btn-white" style="display: none;" onclick="app.openEditSelfModal()">
+                    <i class="fa-solid fa-user-pen"></i> Edit Profile
+                </button>
+                <button id="btn-admin-portal" class="fk-btn-outline" onclick="app.openAuth('admin')">
+                    <i class="fa-solid fa-shield-halved"></i> Admin Login
+                </button>
+                <button id="btn-logout" class="fk-btn-outline" style="display: none;" onclick="app.logout()">
+                    <i class="fa-solid fa-power-off"></i> Logout
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- NOTIFICATION TOAST (Used for OTP & System Alerts) -->
+    <div id="toast-box" class="toast-box"></div>
+
+    <main class="fk-main">
+
+        <!-- VIEW 1: LANDING PAGE (ROLE SELECTION) -->
+        <section id="view-landing" class="view-panel active">
+            <div class="hero-banner">
+                <h1>Welcome to V-Service</h1>
+                <p>Select how you would like to continue on India's On-Demand Service Marketplace</p>
+                <div class="role-cards-grid">
+                    <div class="role-card" onclick="app.openAuth('receiver')">
+                        <div class="role-icon"><i class="fa-solid fa-user-check"></i></div>
+                        <h2>I Need a Service (Receiver)</h2>
+                        <p>Browse verified professionals in your location, chat with live camera photos, book dates, and post reviews.</p>
+                        <button class="fk-btn-blue">Continue as Receiver <i class="fa-solid fa-arrow-right"></i></button>
+                    </div>
+                    <div class="role-card" onclick="app.openAuth('worker')">
+                        <div class="role-icon"><i class="fa-solid fa-helmet-safety"></i></div>
+                        <h2>I am a Service Worker</h2>
+                        <p>Register your skill, upload certificates and work photos, accept customer bookings, and grow your business.</p>
+                        <button class="fk-btn-orange">Continue as Worker <i class="fa-solid fa-arrow-right"></i></button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW 2: AUTHENTICATION (LOGIN / SIGNUP / OTP / FORGOT PASSWORD) -->
+        <section id="view-auth" class="view-panel">
+            <div class="fk-auth-modal">
+                <div class="fk-auth-left">
+                    <h2 id="auth-left-title">Login</h2>
+                    <p id="auth-left-desc">Get access to verified local experts, instant bookings, and real-time photo chat.</p>
+                    <div class="auth-graphic"><i class="fa-solid fa-briefcase"></i></div>
+                </div>
+                <div class="fk-auth-right">
+                    <!-- Auth Mode Tabs (Hidden for Admin) -->
+                    <div class="auth-tabs" id="auth-tabs-bar">
+                        <button id="tab-signin" class="active" onclick="app.switchAuthTab('signin')">Sign In</button>
+                        <button id="tab-signup" onclick="app.switchAuthTab('signup')">New User Sign Up</button>
+                    </div>
+
+                    <form id="auth-form" onsubmit="app.handleAuthSubmit(event)">
+                        <div class="form-group">
+                            <label>10-Digit Mobile Number</label>
+                            <div class="phone-input-row">
+                                <span class="prefix">+91</span>
+                                <input type="text" id="auth-phone" maxlength="10" placeholder="Enter 10-digit Phone Number" required>
+                            </div>
+                            <small id="phone-error" class="error-text" style="display: none;">Invalid Phone Number! Must be exactly 10 digits.</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label id="password-label">Password</label>
+                            <input type="password" id="auth-password" placeholder="Enter Password" required>
+                            <small id="wrong-pass-error" class="error-text" style="display: none;">Incorrect Password entered.</small>
+                        </div>
+
+                        <!-- Forgot Password Option (Revealed on Wrong Password) -->
+                        <div id="forgot-pass-box" style="display: none; margin-bottom: 12px;">
+                            <button type="button" class="link-btn" onclick="app.triggerForgotPasswordOTP()">
+                                <i class="fa-solid fa-key"></i> Forgot Password? Verify OTP to Reset
+                            </button>
+                        </div>
+
+                        <!-- OTP Verification Box (For Sign Up & Forgot Password) -->
+                        <div id="otp-section" class="otp-box" style="display: none;">
+                            <label>Enter 4-Digit OTP sent to your number</label>
+                            <div class="otp-row">
+                                <input type="text" id="auth-otp" maxlength="4" placeholder="4-Digit OTP">
+                                <button type="button" class="fk-btn-blue" onclick="app.sendOTP()">Send / Resend OTP</button>
+                            </div>
+                            <small id="otp-hint" class="success-text"></small>
+                        </div>
+
+                        <!-- EXTRA SIGNUP FIELDS FOR RECEIVER -->
+                        <div id="signup-receiver-fields" style="display: none;">
+                            <div class="form-group">
+                                <label>Full Name</label>
+                                <input type="text" id="rec-name" placeholder="Enter your Name">
+                            </div>
+                            <div class="form-group">
+                                <label>Your City / Location</label>
+                                <input type="text" id="rec-location" placeholder="e.g., Kozhikode, Kochi, Bengaluru">
+                            </div>
+                        </div>
+
+                        <!-- EXTRA SIGNUP FIELDS FOR WORKER -->
+                        <div id="signup-worker-fields" style="display: none;">
+                            <div class="form-grid-2">
+                                <div class="form-group">
+                                    <label>Full Name</label>
+                                    <input type="text" id="wrk-name" placeholder="Worker Name">
+                                </div>
+                                <div class="form-group">
+                                    <label>Service Phone Number</label>
+                                    <input type="text" id="wrk-service-phone" maxlength="10" placeholder="10-digit Service Contact">
+                                </div>
+                                <div class="form-group">
+                                    <label>Select Service Category</label>
+                                    <select id="wrk-service-cat"></select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Years of Experience</label>
+                                    <input type="number" id="wrk-exp" min="0" max="50" placeholder="e.g., 5">
+                                </div>
+                                <div class="form-group">
+                                    <label>Service Location (City/Town)</label>
+                                    <input type="text" id="wrk-location" placeholder="e.g., Kozhikode">
+                                </div>
+                                <div class="form-group">
+                                    <label>Experience Certificate (PDF, Optional)</label>
+                                    <input type="file" id="wrk-cert-pdf" accept=".pdf">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Full Residential / Shop Address</label>
+                                <input type="text" id="wrk-address" placeholder="Building, Street, Pin Code">
+                            </div>
+                            <div class="form-group">
+                                <label>Profile Photo</label>
+                                <input type="file" id="wrk-avatar" accept="image/*">
+                            </div>
+                            <div class="form-group">
+                                <label>Profile Bio / Service Description</label>
+                                <textarea id="wrk-bio" rows="2" placeholder="Describe your tools, expertise, and standard rates..."></textarea>
+                            </div>
+                            <div class="portfolio-upload-box">
+                                <h4><i class="fa-solid fa-images"></i> Upload Work Portfolio (Flipkart Review Style)</h4>
+                                <div class="form-group">
+                                    <label>Photo of Your Previous Work</label>
+                                    <input type="file" id="wrk-work-photo" accept="image/*">
+                                </div>
+                                <div class="form-group">
+                                    <label>Work Description (Max 50 Words)</label>
+                                    <textarea id="wrk-work-desc" rows="2" placeholder="Explain this work project in up to 50 words..." oninput="app.checkWordLimit(this, 'word-count-msg')"></textarea>
+                                    <small id="word-count-msg">0 / 50 words</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="fk-btn-orange full-width" id="auth-submit-btn">Continue</button>
+                        <button type="button" class="fk-btn-light full-width" style="margin-top:8px;" onclick="app.goHome()">Back to Role Selection</button>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW 3: RECEIVER MARKETPLACE (FLIPKART INTERFACE) -->
+        <section id="view-receiver" class="view-panel">
+            <!-- Flipkart Category Ribbon -->
+            <div class="fk-category-ribbon" id="category-ribbon"></div>
+
+            <div class="marketplace-layout">
+                <!-- Left Sidebar: Bookings & Active Chats -->
+                <aside class="fk-sidebar">
+                    <div class="sidebar-card">
+                        <h3><i class="fa-solid fa-calendar-check"></i> My Bookings</h3>
+                        <div id="receiver-bookings-list" class="mini-list"></div>
+                    </div>
+                </aside>
+
+                <!-- Main Product/Worker Grid -->
+                <div class="fk-content-area">
+                    <div class="section-header-bar">
+                        <h2 id="marketplace-heading">All Verified Service Professionals</h2>
+                        <span id="worker-count-label"></span>
+                    </div>
+                    <div id="workers-grid" class="fk-products-grid"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW 4: WORKER DASHBOARD -->
+        <section id="view-worker" class="view-panel">
+            <div class="worker-dash-container">
+                <div id="worker-approval-banner" class="status-banner"></div>
+
+                <div class="dash-grid">
+                    <!-- Worker Profile Summary Card -->
+                    <div class="fk-card">
+                        <h3><i class="fa-solid fa-id-card"></i> My Worker Profile</h3>
+                        <div id="worker-self-summary"></div>
+                        <hr>
+                        <h4>Add More Work Portfolio Photos</h4>
+                        <div class="form-group" style="margin-top:8px;">
+                            <input type="file" id="add-port-photo" accept="image/*">
+                        </div>
+                        <div class="form-group">
+                            <textarea id="add-port-desc" rows="2" placeholder="Describe work (Max 50 words)..." oninput="app.checkWordLimit(this, 'add-word-count')"></textarea>
+                            <small id="add-word-count">0 / 50 words</small>
+                        </div>
+                        <button class="fk-btn-blue" onclick="app.addPortfolioItem()"><i class="fa-solid fa-plus"></i> Add to Portfolio</button>
+                    </div>
+
+                    <!-- Incoming Bookings & Messages -->
+                    <div class="fk-card">
+                        <h3><i class="fa-solid fa-bell"></i> Customer Booking Requests & Messages</h3>
+                        <div id="worker-bookings-list"></div>
+                        <hr style="margin: 16px 0;">
+                        <h3><i class="fa-solid fa-comments"></i> Direct Customer Inquiries</h3>
+                        <div id="worker-chats-list"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW 5: ADMIN CONTROL PORTAL -->
+         <section id="view-admin" class="view-panel">
+            <div class="admin-header-strip">
+                <h2><i class="fa-solid fa-gauge-high"></i> V-Service Master Admin Console</h2>
+                <div class="admin-tabs">
+                    <button class="active" onclick="app.switchAdminTab('analytics', this)"><i class="fa-solid fa-chart-line"></i> Performance & Graphs</button>
+                    <button onclick="app.switchAdminTab('workers', this)"><i class="fa-solid fa-users-gear"></i> Workers (By Service)</button>
+                    <button onclick="app.switchAdminTab('receivers', this)"><i class="fa-solid fa-users"></i> Receivers</button>
+                    <button onclick="app.switchAdminTab('services', this)"><i class="fa-solid fa-ban"></i> Block/Unblock Services</button>
+                    <button onclick="app.switchAdminTab('messages', this)"><i class="fa-solid fa-envelope-open-text"></i> Read Worker Messages</button>
+                </div>
+            </div>
+
+            <!-- Admin Tab 1: Performance & Graphs -->
+            <div id="admin-tab-analytics" class="admin-tab-body active">
+                <div class="kpi-grid">
+                    <div class="kpi-card">
+                        <div class="kpi-title">LAST MONTH ORDERS</div>
+                        <div class="kpi-value" id="kpi-month-orders">0</div>
+                        <div class="kpi-sub"><i class="fa-solid fa-arrow-trend-up"></i> +18.4% vs previous month</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-title">ORDERS PER HOUR (AVG)</div>
+                        <div class="kpi-value" id="kpi-hour-orders">0</div>
+                        <div class="kpi-sub"><i class="fa-solid fa-clock"></i> Peak hours: 09:00 - 18:00</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-title">ORDERS PER MINUTE (LIVE RATE)</div>
+                        <div class="kpi-value" id="kpi-min-orders">0</div>
+                        <div class="kpi-sub"><i class="fa-solid fa-bolt"></i> Real-time booking velocity</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-title">PENDING WORKER APPROVALS</div>
+                        <div class="kpi-value" id="kpi-pending-workers">0</div>
+                        <div class="kpi-sub"><i class="fa-solid fa-user-shield"></i> Awaiting evaluation</div>
+                    </div>
+                </div>
+                <div class="fk-card" style="margin-top: 20px;">
+                    <h3><i class="fa-solid fa-chart-column"></i> Last 30 Days Order Performance & Velocity Graph</h3>
+                    <canvas id="admin-performance-chart" width="950" height="300"></canvas>
+                </div>
+            </div>
+
+            <!-- Admin Tab 2: Registered Workers (Classified by Service) -->
+            <div id="admin-tab-workers" class="admin-tab-body">
+                <div class="filter-bar">
+                    <label>Classify by Service Category:</label>
+                    <select id="admin-worker-cat-filter" onchange="app.renderAdminWorkers()"></select>
+                </div>
+                <div id="admin-workers-container"></div>
+            </div>
+
+            <!-- Admin Tab 3: Registered Receivers -->
+            <div id="admin-tab-receivers" class="admin-tab-body">
+                <div id="admin-receivers-container"></div>
+            </div>
+
+            <!-- Admin Tab 4: Temporary Service Block -->
+            <div id="admin-tab-services" class="admin-tab-body">
+                <div class="fk-card">
+                    <h3><i class="fa-solid fa-sliders"></i> Service Availability Control</h3>
+                    <p>Temporarily block or unblock specific services from appearing to Receivers across the application.</p>
+                    <div id="admin-services-grid" class="service-toggle-grid"></div>
+                </div>
+            </div>
+
+            <!-- Admin Tab 5: Read Worker Messages -->
+            <div id="admin-tab-messages" class="admin-tab-body">
+                <div class="fk-card">
+                    <h3><i class="fa-solid fa-eye"></i> Worker & Receiver Message Audit Log</h3>
+                    <div id="admin-messages-log"></div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- MODAL 1: WORKER FULL PROFILE, PORTFOLIO, BOOKING & FLIPKART REVIEWS -->
+    <div id="modal-worker-detail" class="modal-overlay" style="display: none;">
+        <div class="modal-box modal-large">
+            <div class="modal-header">
+                <h3 id="detail-worker-title">Worker Profile</h3>
+                <button class="close-btn" onclick="app.closeModal('modal-worker-detail')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body" id="detail-worker-content"></div>
+        </div>
+    </div>
+
+    <!-- MODAL 2: CHAT & PHOTO SHARING (GALLERY + LIVE INSTANT CAMERA) -->
+    <div id="modal-chat" class="modal-overlay" style="display: none;">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3 id="chat-header-title"><i class="fa-solid fa-comments"></i> Direct Message</h3>
+                <button class="close-btn" onclick="app.closeChatModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="chat-messages-area" id="chat-messages-box"></div>
+
+            <!-- Live Camera Viewfinder (Hidden until Instant Camera is clicked) -->
+            <div id="camera-viewfinder" class="camera-box" style="display: none;">
+                <video id="camera-video" autoplay playsinline></video>
+                <div class="camera-actions">
+                    <button type="button" class="fk-btn-orange" onclick="app.captureCameraPhoto()"><i class="fa-solid fa-camera"></i> Capture & Send</button>
+                    <button type="button" class="fk-btn-light" onclick="app.stopCameraStream()">Cancel</button>
+                </div>
+            </div>
+
+            <div class="chat-input-bar">
+                <label class="icon-btn" title="Share Photo from Gallery">
+                    <i class="fa-solid fa-image"></i>
+                    <input type="file" accept="image/*" style="display: none;" onchange="app.sendGalleryPhoto(event)">
+                </label>
+                <button type="button" class="icon-btn" title="Instant Camera Capture" onclick="app.startCameraStream()">
+                    <i class="fa-solid fa-camera-retro"></i>
+                </button>
+                <input type="text" id="chat-text-input" placeholder="Type a message or share site photos...">
+                <button type="button" class="fk-btn-blue" onclick="app.sendTextMessage()"><i class="fa-solid fa-paper-plane"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 3: UNIVERSAL EDIT PROFILE MODAL (RECEIVER, WORKER, OR ADMIN EDITING USER) -->
+    <div id="modal-edit-profile" class="modal-overlay" style="display: none;">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3 id="edit-profile-heading"><i class="fa-solid fa-user-pen"></i> Edit Profile</h3>
+                <button class="close-btn" onclick="app.closeModal('modal-edit-profile')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="edit-profile-form" class="modal-body" onsubmit="app.saveEditedProfile(event)">
+                <input type="hidden" id="edit-user-id">
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" id="edit-name" required>
+                </div>
+                <div class="form-group">
+                    <label>Location / City</label>
+                    <input type="text" id="edit-location" required>
+                </div>
+                <div id="edit-worker-extra" style="display: none;">
+                    <div class="form-group">
+                        <label>Service Phone Number (10 digits)</label>
+                        <input type="text" id="edit-service-phone" maxlength="10">
+                    </div>
+                    <div class="form-group">
+                        <label>Years of Experience</label>
+                        <input type="number" id="edit-exp">
+                    </div>
+                    <div class="form-group">
+                        <label>Address</label>
+                        <input type="text" id="edit-address">
+                    </div>
+                    <div class="form-group">
+                        <label>Description / Bio</label>
+                        <textarea id="edit-bio" rows="3"></textarea>
+                    </div>
+                </div>
+                <button type="submit" class="fk-btn-blue full-width"><i class="fa-solid fa-floppy-disk"></i> Save Changes</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
